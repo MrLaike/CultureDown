@@ -1,0 +1,66 @@
+version: '3'
+services:
+  cu-nginx:
+    build:
+      context: ./docker/dev/
+      dockerfile: nginx.docker
+    volumes:
+      - ./back:/app
+    ports:
+      - "8080:80"
+    depends_on:
+      - cu-php-fpm
+  cu-php-fpm:
+    build:
+      args:
+        USER: user
+        UID: 1000
+      context: ./docker/dev/
+      dockerfile: php-fpm.docker
+    volumes:
+      - ./back:/app
+    depends_on:
+      - cu-db
+      - cu-queue-redis
+      - mailer
+  cu-php-cli:
+    build:
+      args:
+        USER: user
+        UID: 1000
+      context: ./docker/dev
+      dockerfile: php-cli.docker
+    tty: true
+    stdin_open: true
+    volumes:
+      - ./back:/app
+      - composer:/root/.composer/cache
+    depends_on:
+      - cu-db
+      - cu-queue-redis
+      - mailer
+
+  cu-queue-redis:
+    image: redis:7.0.5-alpine
+    volumes:
+      - cu-queue-redis:/data
+  cu-db:
+    image: postgres:14.5-alpine
+    volumes:
+      - cu-db:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: culturedown
+    ports:
+      - "54323:5432"
+  mailer:
+    image: mailhog/mailhog
+    ports:
+      - "8030:8025"
+
+volumes:
+  cu-db:
+  cu-queue-redis:
+  composer:
+
